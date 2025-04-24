@@ -1,60 +1,115 @@
 import { TextLine } from './text-line';
 
 export class TextScanner {
-  textLines: TextLine[];
-  allTextNodes: Node[];
-  
+  textLines: TextLine[] = [];
+  textNodes: Node[] = [];
+  textRanges: Range[] = [];
+  lastRange?: Range;
+  currentTextLine?: TextLine
+
   constructor() {
     this.textLines = [];
-    this.allTextNodes = [];
+    this.textNodes = [];
   }
 
   scanElement(element: HTMLElement = document.body) {
     const treeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     let currentNode = treeWalker.nextNode();
-    
+
     while (currentNode) {
       if (currentNode.textContent && currentNode.textContent.trim().length !== 0) {
-        this.allTextNodes.push(currentNode);
+        this.textNodes.push(currentNode);
       }
       currentNode = treeWalker.nextNode();
     }
-    
+
     this.extractLines();
     return this.textLines;
   }
 
-   getFirstNonWhitespaceIndex(text : string) {
+  getFirstNonWhitespaceIndex(text: string) {
     const match = text.match(/\S/);
     return match ? match.index! : -1;
   }
 
-   getTextBoundRect(node: Node, index:number) {
+  getTextBoundRect(node: Node, index: number) {
     const range = new Range();
     range.setStart(node, index);
     range.setEnd(node, index + 1);
     return range.getBoundingClientRect();
   }
 
-   extractLines() {
+  extractLines() {
     this.textLines = [];
-    this.allTextNodes.forEach(node => this.extractNodeLines(node));
+    this.textRanges = [];
+
+    this.textNodes.forEach((node,index) => this.extractRange(node,index));
+    this.rangesToLine()
   }
 
-   extractNodeLines(node: Node) {
+  rangesToLine() {
+    if (!this.textRanges.length) {
+      return
+    }
+
+    const textLine = new TextLine(this.textRanges)
+    this.textLines.push(textLine)
+
+    this.textRanges = []
+    this.lastRange = undefined
+  }
+
+  extractRange(node: Node, nodeIndex: number) {
     const firstTextIndex = this.getFirstNonWhitespaceIndex(node.textContent!);
     const lastTextIndex = node.textContent!.length - 1;
+
     let start = firstTextIndex;
-    let startRect = this.getTextBoundRect(node, start!);
+    let end = firstTextIndex + 1;
+    let lastRect: DOMRect | undefined
+
+    for (let index = end; index <= lastTextIndex; index++) {
+      const currentRect = this.getTextBoundRect(node, index);
+
+      if (!lastRect && this.lastRange) {
+        lastRect = this.lastRange.getBoundingClientRect()
+        
+        if (Math.abs(lastRect.top - currentRect.top) > 10) {
+          this.rangesToLine()
+        }
+
+        lastRect = currentRect
+      }
+
+      if (!lastRect) {
+        lastRect = currentRect;
+        continue
+      }
+
     
-    for (let i = firstTextIndex + 1; i <= lastTextIndex; i++) {
-      const currentRect = this.getTextBoundRect(node, i);
-      if (currentRect.top !== startRect.top) {
-        this.textLines.push(new TextLine(node, start, i - 1));
-        start = i;
-        startRect = currentRect;
+      // 检测是否发生换行
+      if (Math.abs(lastRect.top - currentRect.top) > 10) {
+        const range = new Range();
+        range.setStart(node, start);
+        range.setEnd(node, index);
+        this.textRanges.push(range);
+
+        start = index;
+        lastRect = currentRect;
+
+        this.rangesToLine()
+
+     
       }
     }
-    this.textLines.push(new TextLine(node, start, lastTextIndex+1));
+
+    //  处理结尾行
+    if (start !== lastTextIndex) {
+      const range = new Range();
+      range.setStart(node, start);
+      range.setEnd(node, lastTextIndex + 1);
+      
+      this.textRanges.push(range);
+      this.lastRange = range
+    }
   }
 }

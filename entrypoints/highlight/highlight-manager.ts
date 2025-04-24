@@ -6,7 +6,7 @@ export class HighlightManager {
   textLines: TextLine[];
   currentLineIndex: number;
   targetElement?: HTMLElement;
-  
+
   constructor(targetElement?: HTMLElement) {
     this.textScanner = new TextScanner();
     this.textLines = [];
@@ -18,7 +18,6 @@ export class HighlightManager {
     this.textLines = this.textScanner.scanElement(this.targetElement || document.body);
     this.highlightCurrentLine();
     this.bindEvents();
-    console.log(  this.textLines)
   }
 
   bindEvents() {
@@ -30,10 +29,15 @@ export class HighlightManager {
     if (e.key === 'ArrowDown' && this.currentLineIndex < this.textLines.length - 1) {
       this.currentLineIndex++;
       this.highlightCurrentLine();
+      e.stopPropagation();
+      e.preventDefault();
     }
     else if (e.key === 'ArrowUp' && this.currentLineIndex > 0) {
       this.currentLineIndex--;
       this.highlightCurrentLine();
+      e.stopPropagation();
+      e.preventDefault();
+
     }
   }
 

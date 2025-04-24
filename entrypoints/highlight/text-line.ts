@@ -1,19 +1,11 @@
 export class TextLine {
-  node: Node;
-  start: number;
-  end: number;
+  ranges: Range[];
 
-  constructor(node: Node, start:number, end: number) {
-    this.node = node;
-    this.start = start;
-    this.end = end;
+  constructor(ranges: Range[]) {
+    this.ranges = ranges;
   }
 
   highlight() {
-    const range = new Range();
-    range.setStart(this.node, this.start);
-    range.setEnd(this.node, this.end);
-    console.log(this)
-    return new Highlight(range);
+    return new Highlight(...this.ranges);
   }
 }

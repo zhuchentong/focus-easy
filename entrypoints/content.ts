@@ -18,14 +18,13 @@ function injectGlobalStyles() {
 export default defineContentScript({
   matches: ["<all_urls>"],
   main() {
-    console.log('load')
     window.onload = () => {
       injectGlobalStyles()
-      
+
       const finder = new ContentFinder()
       const element = finder.findContentContainer()
 
-      if(element){
+      if (element) {
         const highlightManager = new HighlightManager(element);
         highlightManager.init();
       }
